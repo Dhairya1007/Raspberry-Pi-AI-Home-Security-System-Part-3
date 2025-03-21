@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Monitoring System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .content-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .main-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .video-section {
+            flex: 2;
+        }
+
+        .detection-section {
+            flex: 1;
+            text-align: left;
+            padding: 20px;
+            background-color: #f8f8f8;
+            border-radius: 8px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 15px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            border-bottom: none;
+        }
+
+        .tab.active {
+            background-color: #f8f8f8;
+            border-color: #ddd;
+            border-radius: 4px 4px 0 0;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #333;
+        }
+
+        .video-container {
+            margin-top: 20px;
+            overflow: hidden;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .alert.intruder {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .alert.package {
+            background-color: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .badge {
+            display: inline-block;
+            min-width: 10px;
+            padding: 3px 7px;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            color: #fff;
+            text-align: center;
+            white-space: nowrap;
+            vertical-align: middle;
+            background-color: #777;
+            border-radius: 10px;
+            margin-left: 5px;
+        }
+
+        .badge.intruder {
+            background-color: #c62828;
+        }
+
+        .badge.package {
+            background-color: #1565c0;
+        }
+
+        .detection-info {
+            margin-top: 15px;
+        }
+
+        .detection-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .detection-table th,
+        .detection-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        .detection-table th {
+            background-color: #e0e0e0;
+        }
+
+        .logs-section {
+            margin-top: 20px;
+            text-align: left;
+            padding: 20px;
+            background-color: #f8f8f8;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .log-entry.warning {
+            color: #ff9800;
+        }
+
+        .log-entry.error {
+            color: #f44336;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Security Monitoring System</h1>
+        <div class="content-wrapper">
+            <div class="main-row">
+                <div class="video-section">
+                    <h2>Live Video Stream</h2>
+                    <div class="video-container">
+                        <img src="{{ url_for('video_feed') }}" alt="Video Stream">
+                    </div>
+                    <div class="status">
+                        <p>Streaming from UDP source (127.0.0.1:5010)</p>
+                    </div>
+                </div>
+                <div class="detection-section">
+                    <div class="tabs">
+                        <div class="tab active" data-target="persons">Persons <span id="personsBadge"
+                                class="badge intruder">0</span></div>
+                        <div class="tab" data-target="packages">Packages <span id="packagesBadge"
+                                class="badge package">0</span></div>
+                    </div>
+
+                    <div id="personsTab" class="tab-content active">
+                        <h2>Person Detection</h2>
+                        <div id="intruderAlertBox" class="alert intruder"></div>
+                        <div class="detection-info">
+                            <p><strong>Last Update:</strong> <span id="personTimestamp">-</span></p>
+                            <p><strong>Location:</strong> <span id="personLocation">-</span></p>
+                            <p><strong>Total Persons:</strong> <span id="totalPersons">0</span></p>
+                            <h3>Detection Details</h3>
+                            <table class="detection-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Type</th>
+                                        <th>Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="personTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="packagesTab" class="tab-content">
+                        <h2>Package Detection</h2>
+                        <div id="packageAlertBox" class="alert package"></div>
+                        <div class="detection-info">
+                            <p><strong>Last Update:</strong> <span id="packageTimestamp">-</span></p>
+                            <p><strong>Location:</strong> <span id="packageLocation">-</span></p>
+                            <p><strong>Total Packages:</strong> <span id="totalPackages">0</span></p>
+                            <h3>Detection Details</h3>
+                            <table class="detection-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Type</th>
+                                        <th>Confidence</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="packageTableBody">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="logs-section">
+                <h2>System Logs</h2>
+                <div id="logEntries">
+                    <div class="log-entry">System initialized</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab functionality
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                // Remove active class from all tabs and tab contents
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+                // Add active class to clicked tab
+                this.classList.add('active');
+
+                // Show the corresponding tab content
+                const target = this.getAttribute('data-target');
+                document.getElementById(target + 'Tab').classList.add('active');
+            });
+        });
+
+        // Log entry function
+        function addLogEntry(message, type = 'info') {
+            const logContainer = document.getElementById('logEntries');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+
+            const now = new Date();
+            const timestamp = now.toLocaleTimeString();
+
+            logEntry.textContent = `[${timestamp}] ${message}`;
+
+            logContainer.insertBefore(logEntry, logContainer.firstChild);
+
+            // Limit to 50 log entries
+            const entries = logContainer.getElementsByClassName('log-entry');
+            if (entries.length > 50) {
+                logContainer.removeChild(entries[entries.length - 1]);
+            }
+        }
+
+        function updateDetectionInfo() {
+            fetch('/get_detection')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.timestamp) {
+                        // Update both tabs with the data
+                        document.getElementById('personTimestamp').textContent = data.timestamp;
+                        document.getElementById('personLocation').textContent = data.location;
+                        document.getElementById('packageTimestamp').textContent = data.timestamp;
+                        document.getElementById('packageLocation').textContent = data.location;
+
+                        // Count persons and packages
+                        const persons = data.detections.filter(d => d.type === 'person');
+                        const packages = data.detections.filter(d => d.type === 'package');
+
+                        document.getElementById('totalPersons').textContent = persons.length;
+                        document.getElementById('personsBadge').textContent = persons.length;
+                        document.getElementById('totalPackages').textContent = packages.length;
+                        document.getElementById('packagesBadge').textContent = packages.length;
+
+                        // Update person table
+                        const personTableBody = document.getElementById('personTableBody');
+                        personTableBody.innerHTML = '';
+                        persons.forEach(detection => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${detection.id}</td>
+                                <td>${detection.type}</td>
+                                <td>${detection.confidence.toFixed(2)}</td>
+                            `;
+                            personTableBody.appendChild(row);
+                        });
+
+                        // Update package table
+                        const packageTableBody = document.getElementById('packageTableBody');
+                        packageTableBody.innerHTML = '';
+                        packages.forEach(detection => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${detection.id}</td>
+                                <td>${detection.type}</td>
+                                <td>${detection.confidence.toFixed(2)}</td>
+                            `;
+                            packageTableBody.appendChild(row);
+                        });
+
+                        // Show alerts if items detected
+                        const intruderAlertBox = document.getElementById('intruderAlertBox');
+                        if (persons.length > 0) {
+                            intruderAlertBox.style.display = 'block';
+                            intruderAlertBox.textContent = `Alert: ${persons.length} person(s) detected!`;
+
+                            // Log new person detections
+                            if (intruderAlertBox.getAttribute('data-count') != persons.length) {
+                                addLogEntry(`${persons.length} person(s) detected at ${data.location}`, 'warning');
+                                intruderAlertBox.setAttribute('data-count', persons.length);
+                            }
+                        } else {
+                            intruderAlertBox.style.display = 'none';
+                            intruderAlertBox.setAttribute('data-count', '0');
+                        }
+
+                        const packageAlertBox = document.getElementById('packageAlertBox');
+                        if (packages.length > 0) {
+                            packageAlertBox.style.display = 'block';
+                            packageAlertBox.textContent = `Alert: ${packages.length} package(s) detected!`;
+
+                            // Log new package detections
+                            if (packageAlertBox.getAttribute('data-count') != packages.length) {
+                                addLogEntry(`${packages.length} package(s) detected at ${data.location}`);
+                                packageAlertBox.setAttribute('data-count', packages.length);
+                            }
+                        } else {
+                            packageAlertBox.style.display = 'none';
+                            packageAlertBox.setAttribute('data-count', '0');
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching detection data:', error);
+                    addLogEntry(`Error fetching detection data: ${error.message}`, 'error');
+                });
+        }
+
+        // Update detection info every second
+        setInterval(updateDetectionInfo, 1000);
+
+        // Initial log
+        addLogEntry('Security monitoring dashboard initialized');
+    </script>
+</body>
+
+</html>
